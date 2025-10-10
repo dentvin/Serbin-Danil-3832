@@ -66,6 +66,15 @@ class Program
                     todoCount++;
                     Console.WriteLine("Задача добавлена!");
                     break;
+                case "view":
+                    Console.WriteLine("Список задач:");
+                    for (int i = 0; i < todoCount; i++)
+                    {
+                        if (!string.IsNullOrEmpty(todos[i]))
+                            Console.WriteLine($"{i + 1}. {todos[i]}");
+                    }
+                    break;
+
             }
         }
 
