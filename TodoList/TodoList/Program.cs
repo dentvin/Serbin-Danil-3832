@@ -40,6 +40,9 @@ class Program
                 case "done":
                     MarkTaskDone(command, ref statuses, ref dates, taskCount);
                     break;
+                case "update":
+                    UpdateTask(command, ref tasks, ref dates, taskCount);
+                    break;
                 case "exit":
                     Console.WriteLine("Программа завершена.");
                     return;
@@ -64,6 +67,7 @@ class Program
         Console.WriteLine("add \"текст задачи\" — добавить новую задачу");
         Console.WriteLine("view — показать все задачи");
         Console.WriteLine("done <номер> — отметить задачу выполненной");
+        Console.WriteLine("update <номер> \"новый текст\" — обновить текст задачи");
         Console.WriteLine("exit — выйти из программы");
     }
 
@@ -144,5 +148,35 @@ class Program
         dates[index] = DateTime.Now;
 
         Console.WriteLine($"Задача №{index + 1} отмечена как выполненная!");
+    }
+
+    static void UpdateTask(string command, ref string[] tasks, ref DateTime[] dates, int taskCount)
+    {
+        string[] parts = command.Split(' ', 3); // update <номер> <текст>
+        if (parts.Length < 3 || !int.TryParse(parts[1], out int index))
+        {
+            Console.WriteLine("Ошибка: используйте формат update <номер> \"новый текст\"");
+            return;
+        }
+
+        index--; // пользователь вводит 1, массив с 0
+
+        if (index < 0 || index >= taskCount)
+        {
+            Console.WriteLine("Ошибка: задачи с таким номером не существует.");
+            return;
+        }
+
+        string newText = parts[2].Trim();
+        if (string.IsNullOrEmpty(newText))
+        {
+            Console.WriteLine("Ошибка: текст задачи не может быть пустым.");
+            return;
+        }
+
+        tasks[index] = newText;
+        dates[index] = DateTime.Now;
+
+        Console.WriteLine($"Задача №{index + 1} обновлена!");
     }
 }
