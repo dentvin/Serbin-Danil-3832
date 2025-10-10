@@ -37,6 +37,9 @@ class Program
                 case "view":
                     ViewTasks(tasks, statuses, dates, taskCount);
                     break;
+                case "done":
+                    MarkTaskDone(command, ref statuses, ref dates, taskCount);
+                    break;
                 case "exit":
                     Console.WriteLine("Программа завершена.");
                     return;
@@ -60,6 +63,7 @@ class Program
         Console.WriteLine("profile — показать данные пользователя");
         Console.WriteLine("add \"текст задачи\" — добавить новую задачу");
         Console.WriteLine("view — показать все задачи");
+        Console.WriteLine("done <номер> — отметить задачу выполненной");
         Console.WriteLine("exit — выйти из программы");
     }
 
@@ -117,5 +121,28 @@ class Program
             string status = statuses[i] ? "сделано" : "не сделано";
             Console.WriteLine($"{i + 1}. {tasks[i]} [{status}] {dates[i]}");
         }
+    }
+
+    static void MarkTaskDone(string command, ref bool[] statuses, ref DateTime[] dates, int taskCount)
+    {
+        string[] parts = command.Split(' ', 2);
+        if (parts.Length < 2 || !int.TryParse(parts[1], out int index))
+        {
+            Console.WriteLine("Ошибка: укажите номер задачи, например: done 2");
+            return;
+        }
+
+        index--; // пользователь вводит 1, а индекс в массиве начинается с 0
+
+        if (index < 0 || index >= taskCount)
+        {
+            Console.WriteLine("Ошибка: задачи с таким номером не существует.");
+            return;
+        }
+
+        statuses[index] = true;
+        dates[index] = DateTime.Now;
+
+        Console.WriteLine($"Задача №{index + 1} отмечена как выполненная!");
     }
 }
