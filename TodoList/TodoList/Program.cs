@@ -75,6 +75,9 @@ class Program
                     }
                     break;
 
+                case "exit":
+                    Console.WriteLine("Программа завершена.");
+                    return;
             }
         }
 
