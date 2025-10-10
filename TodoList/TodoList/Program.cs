@@ -34,6 +34,9 @@ class Program
                 case "add":
                     AddTask(command, ref tasks, ref statuses, ref dates, ref taskCount);
                     break;
+                case "view":
+                    ViewTasks(tasks, statuses, dates, taskCount);
+                    break;
                 case "exit":
                     Console.WriteLine("Программа завершена.");
                     return;
@@ -56,6 +59,7 @@ class Program
         Console.WriteLine("help — показать список команд");
         Console.WriteLine("profile — показать данные пользователя");
         Console.WriteLine("add \"текст задачи\" — добавить новую задачу");
+        Console.WriteLine("view — показать все задачи");
         Console.WriteLine("exit — выйти из программы");
     }
 
@@ -102,6 +106,16 @@ class Program
             tasks = newTasks;
             statuses = newStatuses;
             dates = newDates;
+        }
+    }
+
+    static void ViewTasks(string[] tasks, bool[] statuses, DateTime[] dates, int taskCount)
+    {
+        Console.WriteLine("Список задач:");
+        for (int i = 0; i < taskCount; i++)
+        {
+            string status = statuses[i] ? "сделано" : "не сделано";
+            Console.WriteLine($"{i + 1}. {tasks[i]} [{status}] {dates[i]}");
         }
     }
 }
