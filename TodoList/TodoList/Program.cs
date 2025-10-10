@@ -47,6 +47,25 @@ class Program
                 default:
                     Console.WriteLine("Неизвестная команда. Введите help для списка команд.");
                     break;
+                case "add":
+                    if (command.Length <= 4)
+                    {
+                        Console.WriteLine("Ошибка: текст задачи не указан.");
+                        break;
+                    }
+                    string taskText = command.Substring(4).Trim(); // всё после "add"
+                    // проверка, хватает ли места в массиве
+                    if (todoCount >= todos.Length)
+                    {
+                        string[] newTodos = new string[todos.Length * 2]; // новый массив в 2 раза больше
+                        for (int i = 0; i < todos.Length; i++)
+                            newTodos[i] = todos[i];
+                        todos = newTodos;
+                    }
+                    todos[todoCount] = taskText;
+                    todoCount++;
+                    Console.WriteLine("Задача добавлена!");
+                    break;
             }
         }
 
