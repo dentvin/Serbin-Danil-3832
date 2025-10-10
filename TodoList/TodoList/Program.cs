@@ -11,6 +11,8 @@ class Program
         int userBirthYear = int.Parse(GetInput("Введите год рождения: "));
 
         string[] tasks = new string[INITIAL_CAPACITY];
+        bool[] statuses = new bool[INITIAL_CAPACITY];
+        DateTime[] dates = new DateTime[INITIAL_CAPACITY];
         int taskCount = 0;
 
         while (true)
@@ -30,7 +32,7 @@ class Program
                     ShowProfile(userFirstName, userLastName, userBirthYear);
                     break;
                 case "add":
-                    AddTask(command, ref tasks, ref taskCount);
+                    AddTask(command, ref tasks, ref statuses, ref dates, ref taskCount);
                     break;
                 case "exit":
                     Console.WriteLine("Программа завершена.");
@@ -62,7 +64,7 @@ class Program
         Console.WriteLine($"{firstName} {lastName}, {birthYear}");
     }
 
-    static void AddTask(string command, ref string[] tasks, ref int taskCount)
+    static void AddTask(string command, ref string[] tasks, ref bool[] statuses, ref DateTime[] dates, ref int taskCount)
     {
         if (command.Length <= 4)
         {
@@ -72,21 +74,34 @@ class Program
 
         string taskText = command.Substring(4).Trim();
 
-        EnsureCapacity(ref tasks, taskCount);
+        EnsureCapacity(ref tasks, ref statuses, ref dates, taskCount);
 
         tasks[taskCount] = taskText;
+        statuses[taskCount] = false;
+        dates[taskCount] = DateTime.Now;
         taskCount++;
         Console.WriteLine("Задача добавлена!");
     }
 
-    static void EnsureCapacity(ref string[] tasks, int taskCount)
+    static void EnsureCapacity(ref string[] tasks, ref bool[] statuses, ref DateTime[] dates, int taskCount)
     {
         if (taskCount >= tasks.Length)
         {
-            string[] newTasks = new string[tasks.Length * 2];
+            int newSize = tasks.Length * 2;
+            string[] newTasks = new string[newSize];
+            bool[] newStatuses = new bool[newSize];
+            DateTime[] newDates = new DateTime[newSize];
+
             for (int i = 0; i < tasks.Length; i++)
+            {
                 newTasks[i] = tasks[i];
+                newStatuses[i] = statuses[i];
+                newDates[i] = dates[i];
+            }
+
             tasks = newTasks;
+            statuses = newStatuses;
+            dates = newDates;
         }
     }
 }
