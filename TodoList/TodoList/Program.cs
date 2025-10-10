@@ -43,6 +43,9 @@ class Program
                 case "update":
                     UpdateTask(command, ref tasks, ref dates, taskCount);
                     break;
+                case "delete":
+                    DeleteTask(command, ref tasks, ref statuses, ref dates, ref taskCount);
+                    break;
                 case "exit":
                     Console.WriteLine("Программа завершена.");
                     return;
@@ -68,6 +71,7 @@ class Program
         Console.WriteLine("view — показать все задачи");
         Console.WriteLine("done <номер> — отметить задачу выполненной");
         Console.WriteLine("update <номер> \"новый текст\" — обновить текст задачи");
+        Console.WriteLine("delete <номер> — удалить задачу");
         Console.WriteLine("exit — выйти из программы");
     }
 
@@ -119,6 +123,12 @@ class Program
 
     static void ViewTasks(string[] tasks, bool[] statuses, DateTime[] dates, int taskCount)
     {
+        if (taskCount == 0)
+        {
+            Console.WriteLine("Список задач пуст.");
+            return;
+        }
+
         Console.WriteLine("Список задач:");
         for (int i = 0; i < taskCount; i++)
         {
@@ -136,7 +146,7 @@ class Program
             return;
         }
 
-        index--; // пользователь вводит 1, а индекс в массиве начинается с 0
+        index--;
 
         if (index < 0 || index >= taskCount)
         {
@@ -152,14 +162,14 @@ class Program
 
     static void UpdateTask(string command, ref string[] tasks, ref DateTime[] dates, int taskCount)
     {
-        string[] parts = command.Split(' ', 3); // update <номер> <текст>
+        string[] parts = command.Split(' ', 3);
         if (parts.Length < 3 || !int.TryParse(parts[1], out int index))
         {
             Console.WriteLine("Ошибка: используйте формат update <номер> \"новый текст\"");
             return;
         }
 
-        index--; // пользователь вводит 1, массив с 0
+        index--;
 
         if (index < 0 || index >= taskCount)
         {
@@ -178,5 +188,33 @@ class Program
         dates[index] = DateTime.Now;
 
         Console.WriteLine($"Задача №{index + 1} обновлена!");
+    }
+
+    static void DeleteTask(string command, ref string[] tasks, ref bool[] statuses, ref DateTime[] dates, ref int taskCount)
+    {
+        string[] parts = command.Split(' ', 2);
+        if (parts.Length < 2 || !int.TryParse(parts[1], out int index))
+        {
+            Console.WriteLine("Ошибка: используйте формат delete <номер>");
+            return;
+        }
+
+        index--;
+
+        if (index < 0 || index >= taskCount)
+        {
+            Console.WriteLine("Ошибка: задачи с таким номером не существует.");
+            return;
+        }
+
+        for (int i = index; i < taskCount - 1; i++)
+        {
+            tasks[i] = tasks[i + 1];
+            statuses[i] = statuses[i + 1];
+            dates[i] = dates[i + 1];
+        }
+
+        taskCount--;
+        Console.WriteLine($"Задача №{index + 1} удалена!");
     }
 }
