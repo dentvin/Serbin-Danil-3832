@@ -32,19 +32,19 @@ class Program
                     ShowProfile(userFirstName, userLastName, userBirthYear);
                     break;
                 case "add":
-                    AddTask(command, ref tasks, ref statuses, ref dates, ref taskCount);
+                    AddTask(command, tasks, statuses, dates, ref taskCount);
                     break;
                 case "view":
                     ViewTasks(tasks, statuses, dates, taskCount);
                     break;
                 case "done":
-                    MarkTaskDone(command, ref statuses, ref dates, taskCount);
+                    MarkTaskDone(command, statuses, dates, taskCount);
                     break;
                 case "update":
-                    UpdateTask(command, ref tasks, ref dates, taskCount);
+                    UpdateTask(command, tasks, dates, taskCount);
                     break;
                 case "delete":
-                    DeleteTask(command, ref tasks, ref statuses, ref dates, ref taskCount);
+                    DeleteTask(command, tasks, statuses, dates, ref taskCount);
                     break;
                 case "exit":
                     Console.WriteLine("Программа завершена.");
@@ -77,10 +77,11 @@ class Program
 
     static void ShowProfile(string firstName, string lastName, int birthYear)
     {
-        Console.WriteLine($"{firstName} {lastName}, {birthYear}");
+        int age = DateTime.Now.Year - birthYear;
+        Console.WriteLine($"{firstName} {lastName}, {birthYear} (возраст: {age})");
     }
 
-    static void AddTask(string command, ref string[] tasks, ref bool[] statuses, ref DateTime[] dates, ref int taskCount)
+    static void AddTask(string command, string[] tasks, bool[] statuses, DateTime[] dates, ref int taskCount)
     {
         if (command.Length <= 4)
         {
@@ -137,7 +138,7 @@ class Program
         }
     }
 
-    static void MarkTaskDone(string command, ref bool[] statuses, ref DateTime[] dates, int taskCount)
+    static void MarkTaskDone(string command, bool[] statuses, DateTime[] dates, int taskCount)
     {
         string[] parts = command.Split(' ', 2);
         if (parts.Length < 2 || !int.TryParse(parts[1], out int index))
@@ -160,7 +161,7 @@ class Program
         Console.WriteLine($"Задача №{index + 1} отмечена как выполненная!");
     }
 
-    static void UpdateTask(string command, ref string[] tasks, ref DateTime[] dates, int taskCount)
+    static void UpdateTask(string command, string[] tasks, DateTime[] dates, int taskCount)
     {
         string[] parts = command.Split(' ', 3);
         if (parts.Length < 3 || !int.TryParse(parts[1], out int index))
@@ -190,7 +191,7 @@ class Program
         Console.WriteLine($"Задача №{index + 1} обновлена!");
     }
 
-    static void DeleteTask(string command, ref string[] tasks, ref bool[] statuses, ref DateTime[] dates, ref int taskCount)
+    static void DeleteTask(string command, string[] tasks, bool[] statuses, DateTime[] dates, ref int taskCount)
     {
         string[] parts = command.Split(' ', 2);
         if (parts.Length < 2 || !int.TryParse(parts[1], out int index))
