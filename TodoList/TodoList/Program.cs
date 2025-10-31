@@ -4,18 +4,18 @@ using System.Text;
 
 class Program
 {
-    const int INITIAL_CAPACITY = 2;
-
     static void Main()
     {
-        string userFirstName = GetInput("Введите имя: ");
-        string userLastName = GetInput("Введите фамилию: ");
-        int userBirthYear = int.Parse(GetInput("Введите год рождения: "));
+        string firstName = GetInput("Введите имя: ");
+        string lastName = GetInput("Введите фамилию: ");
+        int birthYear;
+        while (!int.TryParse(GetInput("Введите год рождения: "), out birthYear))
+        {
+            Console.WriteLine("Ошибка: введите корректный год.");
+        }
 
-        string[] tasks = new string[INITIAL_CAPACITY];
-        bool[] statuses = new bool[INITIAL_CAPACITY];
-        DateTime[] dates = new DateTime[INITIAL_CAPACITY];
-        int taskCount = 0;
+        var profile = new Profile(firstName, lastName, birthYear);
+        var todoList = new TodoList();
 
         while (true)
         {
@@ -31,25 +31,25 @@ class Program
                     ShowHelp();
                     break;
                 case "profile":
-                    ShowProfile(userFirstName, userLastName, userBirthYear);
+                    Console.WriteLine(profile.GetInfo());
                     break;
                 case "add":
-                    AddTask(command, ref tasks, ref statuses, ref dates, ref taskCount);
+                    AddCommand(command, todoList);
                     break;
                 case "view":
-                    ViewTasks(tasks, statuses, dates, taskCount, command);
+                    ViewCommand(command, todoList);
                     break;
                 case "read":
-                    ReadTask(command, tasks, statuses, dates, taskCount);
+                    ReadCommand(command, todoList);
                     break;
                 case "done":
-                    MarkTaskDone(command, statuses, dates, taskCount);
+                    DoneCommand(command, todoList);
                     break;
                 case "update":
-                    UpdateTask(command, tasks, dates, taskCount);
+                    UpdateCommand(command, todoList);
                     break;
                 case "delete":
-                    DeleteTask(command, tasks, statuses, dates, ref taskCount);
+                    DeleteCommand(command, todoList);
                     break;
                 case "exit":
                     Console.WriteLine("Программа завершена.");
@@ -83,12 +83,6 @@ class Program
         Console.WriteLine("exit — выйти из программы");
     }
 
-    static void ShowProfile(string firstName, string lastName, int birthYear)
-    {
-        int age = DateTime.Now.Year - birthYear;
-        Console.WriteLine($"{firstName} {lastName}, {birthYear} (возраст: {age})");
-    }
-
     static List<string> ParseFlags(string command)
     {
         var flags = new List<string>();
@@ -107,7 +101,7 @@ class Program
         return flags;
     }
 
-    static void AddTask(string command, ref string[] tasks, ref bool[] statuses, ref DateTime[] dates, ref int taskCount)
+    static void AddCommand(string command, TodoList todoList)
     {
         var flags = ParseFlags(command);
         bool multiline = flags.Contains("multiline") || flags.Contains("m");
@@ -120,8 +114,7 @@ class Program
             var sb = new StringBuilder();
             while (true)
             {
-                string line = Console.ReadLine();
-                if (line == null) continue;
+                string line = Console.ReadLine() ?? "";
                 if (line.Trim() == "!end") break;
                 if (sb.Length > 0) sb.Append("\n");
                 sb.Append(line);
@@ -130,79 +123,30 @@ class Program
         }
         else
         {
-            if (command.Length <= 4)
+            string[] parts = command.Split(' ', 2);
+            if (parts.Length < 2 || string.IsNullOrWhiteSpace(parts[1]))
             {
                 Console.WriteLine("Ошибка: текст задачи не указан.");
                 return;
             }
-            taskText = command.Substring(4).Trim();
+            taskText = parts[1].Trim();
         }
 
-        EnsureCapacity(ref tasks, ref statuses, ref dates, taskCount);
-        tasks[taskCount] = taskText;
-        statuses[taskCount] = false;
-        dates[taskCount] = DateTime.Now;
-        taskCount++;
+        todoList.Add(new TodoItem(taskText));
         Console.WriteLine("Задача добавлена!");
     }
 
-    static void EnsureCapacity(ref string[] tasks, ref bool[] statuses, ref DateTime[] dates, int taskCount)
-    {
-        if (taskCount >= tasks.Length)
-        {
-            int newSize = tasks.Length * 2;
-            string[] newTasks = new string[newSize];
-            bool[] newStatuses = new bool[newSize];
-            DateTime[] newDates = new DateTime[newSize];
-
-            for (int i = 0; i < tasks.Length; i++)
-            {
-                newTasks[i] = tasks[i];
-                newStatuses[i] = statuses[i];
-                newDates[i] = dates[i];
-            }
-
-            tasks = newTasks;
-            statuses = newStatuses;
-            dates = newDates;
-        }
-    }
-
-    static void ViewTasks(string[] tasks, bool[] statuses, DateTime[] dates, int taskCount, string command)
+    static void ViewCommand(string command, TodoList todoList)
     {
         var flags = ParseFlags(command);
-        bool showIndex = flags.Contains("index") || flags.Contains("i") || flags.Contains("all") || flags.Contains("a");
-        bool showStatus = flags.Contains("status") || flags.Contains("s") || flags.Contains("all") || flags.Contains("a");
-        bool showDate = flags.Contains("update-date") || flags.Contains("d") || flags.Contains("all") || flags.Contains("a");
+        bool showIndex = flags.Contains("i") || flags.Contains("index") || flags.Contains("a") || flags.Contains("all");
+        bool showDone = flags.Contains("s") || flags.Contains("status") || flags.Contains("a") || flags.Contains("all");
+        bool showDate = flags.Contains("d") || flags.Contains("update-date") || flags.Contains("a") || flags.Contains("all");
 
-        if (taskCount == 0)
-        {
-            Console.WriteLine("Список задач пуст.");
-            return;
-        }
-
-        if (showIndex) Console.Write("| №  ");
-        Console.Write("| Task Text                      ");
-        if (showStatus) Console.Write("| Status ");
-        if (showDate) Console.Write("| Updated Date        ");
-        Console.WriteLine("|");
-
-        for (int i = 0; i < taskCount; i++)
-        {
-            if (showIndex) Console.Write($"| {i + 1,-3}");
-            string text = tasks[i].Length > 30 ? tasks[i].Substring(0, 30) + "..." : tasks[i].PadRight(30);
-            Console.Write($"| {text}");
-            if (showStatus)
-            {
-                string status = statuses[i] ? "Done" : "Not done";
-                Console.Write($"| {status,-7}");
-            }
-            if (showDate) Console.Write($"| {dates[i]:dd.MM.yyyy HH:mm}");
-            Console.WriteLine("|");
-        }
+        todoList.View(showIndex, showDone, showDate);
     }
 
-    static void ReadTask(string command, string[] tasks, bool[] statuses, DateTime[] dates, int taskCount)
+    static void ReadCommand(string command, TodoList todoList)
     {
         string[] parts = command.Split(' ', 2);
         if (parts.Length < 2 || !int.TryParse(parts[1], out int index))
@@ -211,53 +155,35 @@ class Program
             return;
         }
 
-        index--;
-        if (index < 0 || index >= taskCount)
-        {
-            Console.WriteLine("Ошибка: задачи с таким номером не существует.");
-            return;
-        }
-
-        Console.WriteLine($"Task: {tasks[index]}");
-        Console.WriteLine($"Status: {(statuses[index] ? "Done" : "Not done")}");
-        Console.WriteLine($"Updated: {dates[index]:dd.MM.yyyy HH:mm}");
+        todoList.Read(index - 1);
     }
 
-    static void MarkTaskDone(string command, bool[] statuses, DateTime[] dates, int taskCount)
+    static void DoneCommand(string command, TodoList todoList)
     {
         string[] parts = command.Split(' ', 2);
         if (parts.Length < 2 || !int.TryParse(parts[1], out int index))
         {
-            Console.WriteLine("Ошибка: укажите номер задачи, например: done 2");
+            Console.WriteLine("Ошибка: используйте формат done <номер>");
             return;
         }
 
-        index--;
-        if (index < 0 || index >= taskCount)
+        var item = todoList.GetItem(index - 1);
+        if (item == null)
         {
             Console.WriteLine("Ошибка: задачи с таким номером не существует.");
             return;
         }
 
-        statuses[index] = true;
-        dates[index] = DateTime.Now;
-
-        Console.WriteLine($"Задача №{index + 1} отмечена как выполненная!");
+        item.MarkDone();
+        Console.WriteLine($"Задача №{index} отмечена как выполненная!");
     }
 
-    static void UpdateTask(string command, string[] tasks, DateTime[] dates, int taskCount)
+    static void UpdateCommand(string command, TodoList todoList)
     {
         string[] parts = command.Split(' ', 3);
         if (parts.Length < 3 || !int.TryParse(parts[1], out int index))
         {
             Console.WriteLine("Ошибка: используйте формат update <номер> \"новый текст\"");
-            return;
-        }
-
-        index--;
-        if (index < 0 || index >= taskCount)
-        {
-            Console.WriteLine("Ошибка: задачи с таким номером не существует.");
             return;
         }
 
@@ -268,13 +194,18 @@ class Program
             return;
         }
 
-        tasks[index] = newText;
-        dates[index] = DateTime.Now;
+        var item = todoList.GetItem(index - 1);
+        if (item == null)
+        {
+            Console.WriteLine("Ошибка: задачи с таким номером не существует.");
+            return;
+        }
 
-        Console.WriteLine($"Задача №{index + 1} обновлена!");
+        item.UpdateText(newText);
+        Console.WriteLine($"Задача №{index} обновлена!");
     }
 
-    static void DeleteTask(string command, string[] tasks, bool[] statuses, DateTime[] dates, ref int taskCount)
+    static void DeleteCommand(string command, TodoList todoList)
     {
         string[] parts = command.Split(' ', 2);
         if (parts.Length < 2 || !int.TryParse(parts[1], out int index))
@@ -283,21 +214,6 @@ class Program
             return;
         }
 
-        index--;
-        if (index < 0 || index >= taskCount)
-        {
-            Console.WriteLine("Ошибка: задачи с таким номером не существует.");
-            return;
-        }
-
-        for (int i = index; i < taskCount - 1; i++)
-        {
-            tasks[i] = tasks[i + 1];
-            statuses[i] = statuses[i + 1];
-            dates[i] = dates[i + 1];
-        }
-
-        taskCount--;
-        Console.WriteLine($"Задача №{index + 1} удалена!");
+        todoList.Delete(index - 1);
     }
 }
