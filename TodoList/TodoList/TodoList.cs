@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace TodoList
+namespace TodoListApp
 {
     public class TodoList
     {
@@ -16,8 +16,7 @@ namespace TodoList
 
         public void Add(TodoItem item)
         {
-            if (count >= items.Length)
-                IncreaseArray();
+            if (count >= items.Length) IncreaseArray();
             items[count++] = item;
         }
 
@@ -28,15 +27,13 @@ namespace TodoList
                 Console.WriteLine("Ошибка: задачи с таким номером не существует.");
                 return;
             }
-
             for (int i = index; i < count - 1; i++)
                 items[i] = items[i + 1];
-
             count--;
             Console.WriteLine($"Задача №{index + 1} удалена!");
         }
 
-        public void View(bool showIndex, bool showDone, bool showDate)
+        public void View(bool showIndex = true, bool showDone = true, bool showDate = true)
         {
             if (count == 0)
             {
@@ -72,8 +69,12 @@ namespace TodoList
                 Console.WriteLine("Ошибка: задачи с таким номером не существует.");
                 return;
             }
-
             Console.WriteLine(items[index].GetFullInfo());
+        }
+
+        public TodoItem GetItem(int index)
+        {
+            return (index >= 0 && index < count) ? items[index] : null;
         }
 
         private void IncreaseArray()
@@ -84,8 +85,5 @@ namespace TodoList
                 newItems[i] = items[i];
             items = newItems;
         }
-
-        public int Count => count;
-        public TodoItem GetItem(int index) => index >= 0 && index < count ? items[index] : null;
     }
 }

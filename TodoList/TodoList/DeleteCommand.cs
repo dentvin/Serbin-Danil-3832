@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace TodoListApp;
 
-namespace TodoList
+public class DeleteCommand : ICommand
 {
-    internal class DeleteCommand
+    public int Index { get; set; }
+    public TodoList TodoList { get; set; }
+
+    public void Execute()
     {
+        TodoList.Delete(Index - 1);
     }
 }

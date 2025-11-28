@@ -1,12 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace TodoListApp;
 
-namespace TodoList
+public class InvalidCommand : ICommand
 {
-    internal class InvalidCommand
+    private readonly string _message;
+
+    public InvalidCommand(string message)
     {
+        _message = message;
+    }
+
+    public void Execute()
+    {
+        Console.WriteLine(_message);
     }
 }

@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace TodoListApp;
 
-namespace TodoList
+public class ExitCommand : ICommand
 {
-    internal class ExitCommand
+    public void Execute()
     {
+        Console.WriteLine("Выход из программы...");
+        Environment.Exit(0);
     }
 }

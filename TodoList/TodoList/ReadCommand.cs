@@ -1,12 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace TodoListApp;
 
-namespace TodoList
+public class ReadCommand : ICommand
 {
-    internal class ReadCommand
+    public int Index { get; set; }
+    public TodoList TodoList { get; set; }
+
+    public void Execute()
     {
+        var item = TodoList.GetItem(Index - 1);
+        if (item == null)
+        {
+            Console.WriteLine("Нет задачи с таким номером.");
+            return;
+        }
+
+        Console.WriteLine(item.GetFullInfo());
     }
 }

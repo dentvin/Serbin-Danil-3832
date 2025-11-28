@@ -1,12 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace TodoListApp;
 
-namespace TodoList
+public class ViewCommand : ICommand
 {
-    internal class ViewCommand
+    public bool ShowIndex { get; set; }
+    public bool ShowStatus { get; set; }
+    public bool ShowDate { get; set; }
+    public TodoList TodoList { get; set; }
+
+    public void Execute()
     {
+        TodoList.View(ShowIndex, ShowStatus, ShowDate);
     }
 }

@@ -1,12 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace TodoListApp;
 
-namespace TodoList
+public class UpdateCommand : ICommand
 {
-    internal class UpdateCommand
+    public int Index { get; set; }
+    public string NewText { get; set; }
+    public TodoList TodoList { get; set; }
+
+    public void Execute()
     {
+        var item = TodoList.GetItem(Index - 1);
+        if (item == null)
+        {
+            Console.WriteLine("Нет задачи с таким номером.");
+            return;
+        }
+
+        item.UpdateText(NewText);
+        Console.WriteLine("Задача обновлена.");
     }
 }

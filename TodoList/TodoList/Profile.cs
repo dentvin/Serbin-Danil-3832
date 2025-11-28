@@ -1,21 +1,26 @@
 ﻿using System;
 
-public class Profile
+namespace TodoListApp
 {
-    private string firstName;
-    private string lastName;
-    private int birthYear;
-
-    public Profile(string firstName, string lastName, int birthYear)
+    public class Profile
     {
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.birthYear = birthYear;
-    }
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public int BirthYear { get; set; }
 
-    public string GetInfo()
-    {
-        int age = DateTime.Now.Year - birthYear;
-        return $"{firstName} {lastName}, возраст {age}";
+        public Profile() { }
+
+        public Profile(string firstName, string lastName, int birthYear)
+        {
+            FirstName = firstName;
+            LastName = lastName;
+            BirthYear = birthYear;
+        }
+
+        public string GetInfo()
+        {
+            int age = DateTime.Now.Year - BirthYear;
+            return $"{FirstName} {LastName}, возраст {age}";
+        }
     }
 }
