@@ -33,7 +33,7 @@ namespace TodoApp.Services
                 ["redo"] = args => new RedoCommand(),
                 ["linq"] = args => new LinqDemoCommand(),
                 ["error"] = args => new ErrorDemoCommand(),
-                ["async"] = args => new AsyncDemoCommand(),
+                ["load"] = args => ParseLoadCommand(args),
             };
         }
 
@@ -197,6 +197,41 @@ namespace TodoApp.Services
             }
 
             return new DeleteCommand(index);
+        }
+
+        private static ICommand ParseLoadCommand(string[] args)
+        {
+            if (args.Length < 2)
+            {
+                throw new InvalidArgumentException("load", string.Join(" ", args), 
+                    "Требуется: load <количество_скачиваний> <размер_скачиваний>");
+            }
+            
+            if (!int.TryParse(args[0], out int downloadsCount))
+            {
+                throw new InvalidArgumentException("downloadsCount", args[0], 
+                    "Количество скачиваний должно быть целым положительным числом");
+            }
+            
+            if (!int.TryParse(args[1], out int downloadSize))
+            {
+                throw new InvalidArgumentException("downloadSize", args[1], 
+                    "Размер скачиваний должен быть целым положительным числом");
+            }
+            
+            if (downloadsCount <= 0)
+            {
+                throw new InvalidArgumentException("downloadsCount", downloadsCount.ToString(), 
+                    "Количество скачиваний должно быть больше 0");
+            }
+            
+            if (downloadSize <= 0)
+            {
+                throw new InvalidArgumentException("downloadSize", downloadSize.ToString(), 
+                    "Размер скачиваний должен быть больше 0");
+            }
+            
+            return new LoadCommand(downloadsCount, downloadSize);
         }
 
         private static string[] SplitCommand(string input)
