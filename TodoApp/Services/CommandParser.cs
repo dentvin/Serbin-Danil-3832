@@ -31,6 +31,7 @@ namespace TodoApp.Services
                 ["undo"] = args => new UndoCommand(),
                 ["redo"] = args => new RedoCommand(),
                 ["linq"] = args => new LinqDemoCommand(),
+                ["error"] = args => new ErrorDemoCommand(),
             };
         }
 

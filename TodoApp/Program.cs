@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using TodoApp.Commands;
+using TodoApp.Exceptions;
 using TodoApp.Models;
 using TodoApp.Services;
 
@@ -9,16 +10,30 @@ namespace TodoApp
 {
     class Program
     {
-		static void Main()
+        static void Main()
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
             Console.Clear();
 
-            FileManager.EnsureDataDirectory();
-
-            AppInfo.Profiles = FileManager.LoadAllProfiles();
-
-            MainLoop();
+            try
+            {
+                FileManager.EnsureDataDirectory();
+                AppInfo.Profiles = FileManager.LoadAllProfiles();
+                MainLoop();
+            }
+            catch (DataAccessException ex)
+            {
+                Console.WriteLine($"[КРИТИЧЕСКАЯ ОШИБКА] {ex.Message}");
+                Console.WriteLine($"   Файл: {ex.FilePath}");
+                Console.WriteLine("Программа будет закрыта.");
+                Console.ReadKey();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[НЕИЗВЕСТНАЯ ОШИБКА] {ex.Message}");
+                Console.WriteLine(ex.StackTrace);
+                Console.ReadKey();
+            }
         }
 
         private static bool SelectOrCreateProfile()
@@ -52,22 +67,22 @@ namespace TodoApp
 
             while (attempts < maxAttempts)
             {
-                if (AppInfo.Profiles.Count == 0)
+                try
                 {
-                    Console.WriteLine("Нет сохранённых профилей. Пожалуйста, создайте новый.");
-                    return false;
-                }
+                    if (AppInfo.Profiles.Count == 0)
+                    {
+                        Console.WriteLine("Нет сохранённых профилей. Пожалуйста, создайте новый.");
+                        return false;
+                    }
 
-                Console.Write("Логин: ");
-                string login = Console.ReadLine() ?? "";
+                    Console.Write("Логин: ");
+                    string login = Console.ReadLine() ?? "";
 
-                Console.Write("Пароль: ");
-                string password = Console.ReadLine() ?? "";
+                    Console.Write("Пароль: ");
+                    string password = Console.ReadLine() ?? "";
 
-                var profile = FileManager.LoadProfile(login, password);
+                    var profile = FileManager.LoadProfile(login, password);
 
-                if (profile != null)
-                {
                     AppInfo.CurrentProfile = profile;
 
                     string todoPath = FileManager.GetTodoFilePath(profile.Id);
@@ -87,9 +102,21 @@ namespace TodoApp
                     AppInfo.ClearUndoRedo();
                     return true;
                 }
-
-                attempts++;
-                Console.WriteLine($"Неверный логин или пароль. Осталось попыток: {maxAttempts - attempts}");
+                catch (ProfileNotFoundException ex)
+                {
+                    attempts++;
+                    Console.WriteLine($"[ОШИБКА] {ex.Message}. Осталось попыток: {maxAttempts - attempts}");
+                }
+                catch (InvalidPasswordException ex)
+                {
+                    attempts++;
+                    Console.WriteLine($"[ОШИБКА] {ex.Message}. Осталось попыток: {maxAttempts - attempts}");
+                }
+                catch (DataAccessException ex)
+                {
+                    Console.WriteLine($"[ОШИБКА ФАЙЛА] {ex.Message}");
+                    return false;
+                }
             }
 
             Console.WriteLine("Превышено количество попыток входа. Возврат в главное меню.");
@@ -98,46 +125,77 @@ namespace TodoApp
 
         private static bool CreateProfile()
         {
-            Console.Write("Логин: ");
-            string login = Console.ReadLine() ?? "";
-
-            if (AppInfo.Profiles.Any(p => p.Login == login))
+            try
             {
-                Console.WriteLine("Этот логин уже занят.");
+                Console.Write("Логин: ");
+                string login = Console.ReadLine() ?? "";
+
+                if (string.IsNullOrWhiteSpace(login))
+                {
+                    Console.WriteLine("Логин не может быть пустым");
+                    return false;
+                }
+
+                if (AppInfo.Profiles.Any(p => p.Login == login))
+                {
+                    Console.WriteLine("Этот логин уже занят.");
+                    return false;
+                }
+
+                Console.Write("Пароль: ");
+                string password = Console.ReadLine() ?? "";
+
+                if (string.IsNullOrWhiteSpace(password))
+                {
+                    Console.WriteLine("Пароль не может быть пустым");
+                    return false;
+                }
+
+                Console.Write("Имя: ");
+                string firstName = Console.ReadLine() ?? "";
+
+                Console.Write("Фамилия: ");
+                string lastName = Console.ReadLine() ?? "";
+
+                Console.Write("Год рождения: ");
+                if (!int.TryParse(Console.ReadLine(), out int birthYear))
+                {
+                    Console.WriteLine("Неверный формат года.");
+                    return false;
+                }
+
+                if (birthYear < 1900 || birthYear > DateTime.Now.Year)
+                {
+                    Console.WriteLine("Неверный год рождения");
+                    return false;
+                }
+
+                var profile = new Profile(login, password, firstName, lastName, birthYear);
+                AppInfo.Profiles.Add(profile);
+                FileManager.SaveProfile(profile);
+
+                AppInfo.CurrentProfile = profile;
+                AppInfo.UserTodos[profile.Id] = new TodoList();
+
+                string todoPath = FileManager.GetTodoFilePath(profile.Id);
+                FileManager.SaveTodos(AppInfo.UserTodos[profile.Id], todoPath);
+
+                var todoList = AppInfo.UserTodos[profile.Id];
+                SubscribeToTodoEvents(todoList);
+
+                AppInfo.ClearUndoRedo();
+                return true;
+            }
+            catch (DataAccessException ex)
+            {
+                Console.WriteLine($"[ОШИБКА] Не удалось сохранить профиль: {ex.Message}");
                 return false;
             }
-
-            Console.Write("Пароль: ");
-            string password = Console.ReadLine() ?? "";
-
-            Console.Write("Имя: ");
-            string firstName = Console.ReadLine() ?? "";
-
-            Console.Write("Фамилия: ");
-            string lastName = Console.ReadLine() ?? "";
-
-            Console.Write("Год рождения: ");
-            if (!int.TryParse(Console.ReadLine(), out int birthYear))
+            catch (Exception ex)
             {
-                Console.WriteLine("Неверный формат года.");
+                Console.WriteLine($"[ОШИБКА] {ex.Message}");
                 return false;
             }
-
-            var profile = new Profile(login, password, firstName, lastName, birthYear);
-            AppInfo.Profiles.Add(profile);
-            FileManager.SaveProfile(profile);
-
-            AppInfo.CurrentProfile = profile;
-            AppInfo.UserTodos[profile.Id] = new TodoList();
-
-            string todoPath = FileManager.GetTodoFilePath(profile.Id);
-            FileManager.SaveTodos(AppInfo.UserTodos[profile.Id], todoPath);
-
-            var todoList = AppInfo.UserTodos[profile.Id];
-            SubscribeToTodoEvents(todoList);
-
-			AppInfo.ClearUndoRedo();
-            return true;
         }
 
         private static void SubscribeToTodoEvents(TodoList todoList)
@@ -146,38 +204,67 @@ namespace TodoApp
             todoList.OnTodoDeleted += FileManager.SaveTodoList;
             todoList.OnTodoUpdated += FileManager.SaveTodoList;
             todoList.OnStatusChanged += FileManager.SaveTodoList;
-		}
+        }
 
-		private static void MainLoop()
+        private static void MainLoop()
         {
             while (true)
             {
-				if (AppInfo.CurrentProfile is null)
-				{
-					if (!SelectOrCreateProfile())
-					{
-						return;
-					}
-
-					Console.WriteLine($"\nДобро пожаловать, {AppInfo.CurrentProfile?.FirstName}!\n");
-				}
-
-				Console.Write("> ");
-                string input = Console.ReadLine() ?? "";
-
-                if (input.ToLower() == "exit")
+                try
                 {
-                    Console.WriteLine("До свидания!");
-                    break;
+                    if (AppInfo.CurrentProfile is null)
+                    {
+                        if (!SelectOrCreateProfile())
+                        {
+                            return;
+                        }
+
+                        Console.WriteLine($"\nДобро пожаловать, {AppInfo.CurrentProfile?.FirstName}!\n");
+                    }
+
+                    Console.Write("> ");
+                    string input = Console.ReadLine() ?? "";
+
+                    if (input.ToLower() == "exit")
+                    {
+                        Console.WriteLine("До свидания!");
+                        break;
+                    }
+
+                    ICommand command = CommandParser.Parse(input);
+                    command.Execute();
+
+                    if (command is IUndoableCommand undoableCmd)
+                    {
+                        AppInfo.UndoStack.Push(undoableCmd);
+                        AppInfo.RedoStack.Clear();
+                    }
                 }
-
-                ICommand command = CommandParser.Parse(input);
-                command.Execute();
-
-                if (command is IUndoableCommand undoableCmd)
+                catch (ProfileNotFoundException ex)
                 {
-                    AppInfo.UndoStack.Push(undoableCmd);
-                    AppInfo.RedoStack.Clear();
+                    Console.WriteLine($"[ОШИБКА] {ex.Message}");
+                }
+                catch (InvalidPasswordException ex)
+                {
+                    Console.WriteLine($"[ОШИБКА] {ex.Message}");
+                }
+                catch (TodoNotFoundException ex)
+                {
+                    Console.WriteLine($"[ОШИБКА] {ex.Message}");
+                }
+                catch (TodoException ex)
+                {
+                    Console.WriteLine($"[ОШИБКА] {ex.Message}");
+                }
+                catch (DataAccessException ex)
+                {
+                    Console.WriteLine($"[ОШИБКА ФАЙЛА] {ex.Message}");
+                    Console.WriteLine($"   Файл: {ex.FilePath}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[НЕИЗВЕСТНАЯ ОШИБКА] {ex.Message}");
+                    Console.WriteLine($"   {ex.GetType().Name}");
                 }
             }
         }

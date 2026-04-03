@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using TodoApp.Exceptions;
 
 namespace TodoApp.Models
 {
@@ -34,39 +35,50 @@ namespace TodoApp.Models
 
 		public void Delete(int index)
 		{
-			if (index >= 0 && index < _items.Count)
+			if (index < 0 || index >= _items.Count)
 			{
-				var item = _items[index];
-				_items.RemoveAt(index);
-				OnTodoDeleted?.Invoke(item);
+				throw new TodoNotFoundException(index);
 			}
+
+			var item = _items[index];
+			_items.RemoveAt(index);
+			OnTodoDeleted?.Invoke(item);
 		}
 
 		public TodoItem GetItem(int index)
 		{
-			if (index >= 0 && index < _items.Count)
+			if (index < 0 || index >= _items.Count)
 			{
-				return _items[index];
+				throw new TodoNotFoundException(index);
 			}
-			return null;
+			return _items[index];
 		}
 
 		public void SetStatus(int index, TodoStatus status)
 		{
-			if (index >= 0 && index < _items.Count)
+			if (index < 0 || index >= _items.Count)
 			{
-				_items[index].SetStatus(status);
-				OnStatusChanged?.Invoke(_items[index]);
+				throw new TodoNotFoundException(index);
 			}
+
+			_items[index].SetStatus(status);
+			OnStatusChanged?.Invoke(_items[index]);
 		}
 
 		public void UpdateItem(int index, string newText)
 		{
-			if (index >= 0 && index < _items.Count)
+			if (index < 0 || index >= _items.Count)
 			{
-				_items[index].UpdateText(newText);
-				OnTodoUpdated?.Invoke(_items[index]);
+				throw new TodoNotFoundException(index);
 			}
+
+			if (string.IsNullOrWhiteSpace(newText))
+			{
+				throw new TodoException("Текст задачи не может быть пустым");
+			}
+
+			_items[index].UpdateText(newText);
+			OnTodoUpdated?.Invoke(_items[index]);
 		}
 
 		public int Count => _items.Count;
@@ -75,11 +87,12 @@ namespace TodoApp.Models
 		{
 			set
 			{
-				if (index >= 0 && index < _items.Count)
+				if (index < 0 || index >= _items.Count)
 				{
-					_items[index] = value;
-					OnTodoUpdated?.Invoke(value);
+					throw new TodoNotFoundException(index);
 				}
+				_items[index] = value;
+				OnTodoUpdated?.Invoke(value);
 			}
 			get
 			{
@@ -102,19 +115,16 @@ namespace TodoApp.Models
 
 		// ==================== LINQ МЕТОДЫ ====================
 
-		// 1. WHERE - фильтрация по статусу (Method Syntax)
 		public List<TodoItem> GetByStatus(TodoStatus status)
 		{
 			return _items.Where(item => item.Status == status).ToList();
 		}
 
-		// 2. WHERE - фильтрация по тексту (содержит подстроку)
 		public List<TodoItem> GetByTextContains(string searchText)
 		{
 			return _items.Where(item => item.Text.Contains(searchText, StringComparison.OrdinalIgnoreCase)).ToList();
 		}
 
-		// 3. ORDERBY - сортировка по дате
 		public List<TodoItem> GetOrderedByDate(bool descending = false)
 		{
 			return descending
@@ -122,51 +132,43 @@ namespace TodoApp.Models
 				: _items.OrderBy(item => item.LastUpdate).ToList();
 		}
 
-		// 4. ORDERBY - сортировка по статусу
 		public List<TodoItem> GetOrderedByStatus()
 		{
 			return _items.OrderBy(item => item.Status).ToList();
 		}
 
-		// 5. GROUPBY - группировка по статусу
 		public Dictionary<TodoStatus, List<TodoItem>> GetGroupedByStatus()
 		{
 			return _items.GroupBy(item => item.Status)
 						 .ToDictionary(group => group.Key, group => group.ToList());
 		}
 
-		// 6. GROUPBY - статистика по статусам (количество)
 		public Dictionary<TodoStatus, int> GetStatusStatistics()
 		{
 			return _items.GroupBy(item => item.Status)
 						 .ToDictionary(group => group.Key, group => group.Count());
 		}
 
-		// 7. ANY - есть ли выполненные задачи
 		public bool HasCompletedTasks()
 		{
 			return _items.Any(item => item.Status == TodoStatus.Completed);
 		}
 
-		// 8. ALL - все ли задачи выполнены
 		public bool AllTasksCompleted()
 		{
 			return _items.All(item => item.Status == TodoStatus.Completed);
 		}
 
-		// 9. COUNT с условием
 		public int GetCountByStatus(TodoStatus status)
 		{
 			return _items.Count(item => item.Status == status);
 		}
 
-		// 10. SELECT - проекция (только текст задач)
 		public List<string> GetTaskTexts()
 		{
 			return _items.Select(item => item.Text).ToList();
 		}
 
-		// 11. SELECT - проекция с анонимным типом (для статистики)
 		public object GetTaskSummaries()
 		{
 			return _items.Select(item => new
@@ -178,19 +180,16 @@ namespace TodoApp.Models
 			}).ToList();
 		}
 
-		// 12. First/FirstOrDefault
 		public TodoItem GetFirstByStatus(TodoStatus status)
 		{
 			return _items.FirstOrDefault(item => item.Status == status);
 		}
 
-		// 13. Skip/Take - пагинация
 		public List<TodoItem> GetPage(int pageNumber, int pageSize)
 		{
 			return _items.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
 		}
 
-		// 14. QUERY SYNTAX - задачи, которые не обновлялись более N дней
 		public List<TodoItem> GetOldTasks(int daysThreshold)
 		{
 			var threshold = DateTime.Now - TimeSpan.FromDays(daysThreshold);
@@ -200,7 +199,6 @@ namespace TodoApp.Models
 					select item).ToList();
 		}
 
-		// 15. QUERY SYNTAX - задачи с группировкой (альтернативный стиль)
 		public IEnumerable<IGrouping<TodoStatus, TodoItem>> GetGroupedByStatusQuerySyntax()
 		{
 			return from item in _items
@@ -208,7 +206,6 @@ namespace TodoApp.Models
 				   select statusGroup;
 		}
 
-		// 16. Сложный LINQ с несколькими операциями (Fluent API)
 		public List<TodoItem> GetTopIncompleteRecent(int count)
 		{
 			return _items.Where(item => item.Status != TodoStatus.Completed)
@@ -217,7 +214,6 @@ namespace TodoApp.Models
 						 .ToList();
 		}
 
-		// 17. Демонстрация отложенного выполнения - возвращает IEnumerable (НЕ выполняется сразу!)
 		public IEnumerable<TodoItem> GetNotStartedQuery()
 		{
 			return _items.Where(item => item.Status == TodoStatus.NotStarted);
