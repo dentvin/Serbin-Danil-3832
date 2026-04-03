@@ -17,8 +17,12 @@ namespace TodoApp
 
             try
             {
-                FileManager.EnsureDataDirectory();
-                AppInfo.Profiles = FileManager.LoadAllProfiles();
+                // Инициализация FileManager
+                AppInfo.Storage = new FileManager("data");
+                
+                // Загрузка данных через новый Storage
+                AppInfo.LoadAllData();
+                
                 MainLoop();
             }
             catch (DataAccessException ex)
@@ -89,19 +93,20 @@ namespace TodoApp
                     Console.Write("Пароль: ");
                     string password = Console.ReadLine() ?? "";
 
-                    var profile = FileManager.LoadProfile(login, password);
+                    var profile = AppInfo.Profiles.FirstOrDefault(p => p.Login == login && p.Password == password);
+
+                    if (profile == null)
+                    {
+                        attempts++;
+                        Console.WriteLine($"Неверный логин или пароль. Осталось попыток: {maxAttempts - attempts}");
+                        continue;
+                    }
 
                     AppInfo.CurrentProfile = profile;
 
-                    string todoPath = FileManager.GetTodoFilePath(profile.Id);
-                    if (File.Exists(todoPath))
-                    {
-                        AppInfo.UserTodos[profile.Id] = FileManager.LoadTodos(todoPath);
-                    }
-                    else
+                    if (!AppInfo.UserTodos.ContainsKey(profile.Id))
                     {
                         AppInfo.UserTodos[profile.Id] = new TodoList();
-                        FileManager.SaveTodos(AppInfo.UserTodos[profile.Id], todoPath);
                     }
 
                     var todoList = AppInfo.UserTodos[profile.Id];
@@ -110,20 +115,10 @@ namespace TodoApp
                     AppInfo.ClearUndoRedo();
                     return true;
                 }
-                catch (ProfileNotFoundException ex)
+                catch (Exception ex)
                 {
                     attempts++;
                     Console.WriteLine($"[ОШИБКА] {ex.Message}. Осталось попыток: {maxAttempts - attempts}");
-                }
-                catch (InvalidPasswordException ex)
-                {
-                    attempts++;
-                    Console.WriteLine($"[ОШИБКА] {ex.Message}. Осталось попыток: {maxAttempts - attempts}");
-                }
-                catch (DataAccessException ex)
-                {
-                    Console.WriteLine($"[ОШИБКА ФАЙЛА] {ex.Message}");
-                    return false;
                 }
             }
 
@@ -146,7 +141,8 @@ namespace TodoApp
 
                 if (AppInfo.Profiles.Any(p => p.Login == login))
                 {
-                    throw new DuplicateLoginException(login);
+                    Console.WriteLine("Этот логин уже занят.");
+                    return false;
                 }
 
                 Console.Write("Пароль: ");
@@ -179,24 +175,17 @@ namespace TodoApp
 
                 var profile = new Profile(login, password, firstName, lastName, birthYear);
                 AppInfo.Profiles.Add(profile);
-                FileManager.SaveProfile(profile);
+                AppInfo.Storage?.SaveProfiles(AppInfo.Profiles);
 
                 AppInfo.CurrentProfile = profile;
                 AppInfo.UserTodos[profile.Id] = new TodoList();
-
-                string todoPath = FileManager.GetTodoFilePath(profile.Id);
-                FileManager.SaveTodos(AppInfo.UserTodos[profile.Id], todoPath);
+                AppInfo.Storage?.SaveTodos(profile.Id, AppInfo.UserTodos[profile.Id].GetAll());
 
                 var todoList = AppInfo.UserTodos[profile.Id];
                 SubscribeToTodoEvents(todoList);
 
                 AppInfo.ClearUndoRedo();
                 return true;
-            }
-            catch (DuplicateLoginException ex)
-            {
-                Console.WriteLine($"[ОШИБКА] {ex.Message}");
-                return false;
             }
             catch (DataAccessException ex)
             {
@@ -212,10 +201,22 @@ namespace TodoApp
 
         private static void SubscribeToTodoEvents(TodoList todoList)
         {
-            todoList.OnTodoAdded += FileManager.SaveTodoList;
-            todoList.OnTodoDeleted += FileManager.SaveTodoList;
-            todoList.OnTodoUpdated += FileManager.SaveTodoList;
-            todoList.OnStatusChanged += FileManager.SaveTodoList;
+            todoList.OnTodoAdded += (item) => SaveCurrentTodos();
+            todoList.OnTodoDeleted += (item) => SaveCurrentTodos();
+            todoList.OnTodoUpdated += (item) => SaveCurrentTodos();
+            todoList.OnStatusChanged += (item) => SaveCurrentTodos();
+        }
+
+        private static void SaveCurrentTodos()
+        {
+            if (AppInfo.CurrentProfile != null && AppInfo.Storage != null)
+            {
+                var todoList = AppInfo.GetCurrentTodoList();
+                if (todoList != null)
+                {
+                    AppInfo.Storage.SaveTodos(AppInfo.CurrentProfile.Id, todoList.GetAll());
+                }
+            }
         }
 
         private static void MainLoop()
