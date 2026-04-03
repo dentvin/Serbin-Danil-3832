@@ -30,6 +30,7 @@ namespace TodoApp.Services
                 ["delete"] = args => ParseDeleteCommand(args),
                 ["undo"] = args => new UndoCommand(),
                 ["redo"] = args => new RedoCommand(),
+                ["linq"] = args => new LinqDemoCommand(),
             };
         }
 

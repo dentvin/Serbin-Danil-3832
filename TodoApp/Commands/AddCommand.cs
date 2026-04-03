@@ -11,6 +11,7 @@ namespace TodoApp.Commands
         private bool _isMultiline;
         private TodoItem _addedItem;
         private TodoList _todos;
+        private int _addedIndex;
 
         public AddCommand(string text, bool isMultiline)
         {
@@ -29,8 +30,8 @@ namespace TodoApp.Commands
             }
 
             _addedItem = new TodoItem(_text);
+            _addedIndex = _todos.Count;
             _todos.Add(_addedItem);
-            // Событие OnTodoAdded будет вызвано автоматически в TodoList.Add()
 
             Console.WriteLine($"Задача добавлена: {_text}");
         }
@@ -40,13 +41,12 @@ namespace TodoApp.Commands
             _todos = AppInfo.GetCurrentTodoList();
             if (_todos == null || _addedItem == null) return;
 
-            // Remove the last added item
+            // Находим индекс добавленного элемента
             var items = _todos.GetAll();
-            if (items.Count > 0 && items[items.Count - 1] == _addedItem)
+            int index = items.FindIndex(item => item == _addedItem);
+            if (index != -1)
             {
-                _todos.Delete(_todos.Count - 1);
-                // Событие OnTodoDeleted будет вызвано автоматически в TodoList.Delete()
-
+                _todos.Delete(index);
                 Console.WriteLine("Отменено добавление задачи");
             }
         }

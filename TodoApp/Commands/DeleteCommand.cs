@@ -7,6 +7,7 @@ namespace TodoApp.Commands
 	public class DeleteCommand : IUndoableCommand
 	{
 		private int _index;
+		private int _originalIndex;
 		private TodoItem _deletedItem;
 		private TodoList _todos;
 
@@ -20,17 +21,15 @@ namespace TodoApp.Commands
 			_todos = AppInfo.GetCurrentTodoList();
 			if (_todos == null) return;
 
-
-			_deletedItem = _todos[_index];
-
-			if (_deletedItem == null)
+			if (_index < 0 || _index >= _todos.Count)
 			{
 				Console.WriteLine($"Ошибка: задача с индексом {_index} не найдена.");
 				return;
 			}
 
+			_deletedItem = _todos[_index];
+			_originalIndex = _index;
 			_todos.Delete(_index);
-			// Событие OnTodoDeleted будет вызвано автоматически в TodoList.Delete()
 
 			Console.WriteLine($"Задача удалена: {_deletedItem.Text}");
 		}
@@ -40,9 +39,7 @@ namespace TodoApp.Commands
 			_todos = AppInfo.GetCurrentTodoList();
 			if (_todos == null || _deletedItem == null) return;
 
-			_todos.Add(_deletedItem);
-			// Событие OnTodoAdded будет вызвано автоматически в TodoList.Add()
-
+			_todos.InsertAt(_originalIndex, _deletedItem);
 			Console.WriteLine("Отменено удаление задачи");
 		}
 	}

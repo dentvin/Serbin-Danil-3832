@@ -47,44 +47,53 @@ namespace TodoApp
 
         private static bool LoginProfile()
         {
-            if (AppInfo.Profiles.Count == 0)
+            int attempts = 0;
+            const int maxAttempts = 3;
+
+            while (attempts < maxAttempts)
             {
-                Console.WriteLine("Нет сохранённых профилей. Пожалуйста, создайте новый.");
-                return false;
-            }
-
-            Console.Write("Логин: ");
-            string login = Console.ReadLine() ?? "";
-
-            Console.Write("Пароль: ");
-            string password = Console.ReadLine() ?? "";
-
-            var profile = FileManager.LoadProfile(login, password);
-
-            if (profile != null)
-            {
-                AppInfo.CurrentProfile = profile;
-
-                string todoPath = FileManager.GetTodoFilePath(profile.Id);
-                if (File.Exists(todoPath))
+                if (AppInfo.Profiles.Count == 0)
                 {
-                    AppInfo.UserTodos[profile.Id] = FileManager.LoadTodos(todoPath);
-                }
-                else
-                {
-                    AppInfo.UserTodos[profile.Id] = new TodoList();
-                    FileManager.SaveTodos(AppInfo.UserTodos[profile.Id], todoPath);
+                    Console.WriteLine("Нет сохранённых профилей. Пожалуйста, создайте новый.");
+                    return false;
                 }
 
-                var todoList = AppInfo.UserTodos[profile.Id];
-                SubscribeToTodoEvents(todoList);
+                Console.Write("Логин: ");
+                string login = Console.ReadLine() ?? "";
 
-				AppInfo.ClearUndoRedo();
-                return true;
+                Console.Write("Пароль: ");
+                string password = Console.ReadLine() ?? "";
+
+                var profile = FileManager.LoadProfile(login, password);
+
+                if (profile != null)
+                {
+                    AppInfo.CurrentProfile = profile;
+
+                    string todoPath = FileManager.GetTodoFilePath(profile.Id);
+                    if (File.Exists(todoPath))
+                    {
+                        AppInfo.UserTodos[profile.Id] = FileManager.LoadTodos(todoPath);
+                    }
+                    else
+                    {
+                        AppInfo.UserTodos[profile.Id] = new TodoList();
+                        FileManager.SaveTodos(AppInfo.UserTodos[profile.Id], todoPath);
+                    }
+
+                    var todoList = AppInfo.UserTodos[profile.Id];
+                    SubscribeToTodoEvents(todoList);
+
+                    AppInfo.ClearUndoRedo();
+                    return true;
+                }
+
+                attempts++;
+                Console.WriteLine($"Неверный логин или пароль. Осталось попыток: {maxAttempts - attempts}");
             }
 
-            Console.WriteLine("Неверный логин или пароль.");
-            return LoginProfile();
+            Console.WriteLine("Превышено количество попыток входа. Возврат в главное меню.");
+            return false;
         }
 
         private static bool CreateProfile()
