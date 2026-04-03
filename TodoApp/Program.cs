@@ -36,6 +36,14 @@ namespace TodoApp
             }
         }
 
+        private static void EnsureAuthenticated()
+        {
+            if (AppInfo.CurrentProfile == null)
+            {
+                throw new AuthenticationException();
+            }
+        }
+
         private static bool SelectOrCreateProfile()
         {
             while (true)
@@ -138,8 +146,7 @@ namespace TodoApp
 
                 if (AppInfo.Profiles.Any(p => p.Login == login))
                 {
-                    Console.WriteLine("Этот логин уже занят.");
-                    return false;
+                    throw new DuplicateLoginException(login);
                 }
 
                 Console.Write("Пароль: ");
@@ -166,7 +173,7 @@ namespace TodoApp
 
                 if (birthYear < 1900 || birthYear > DateTime.Now.Year)
                 {
-                    Console.WriteLine("Неверный год рождения");
+                    Console.WriteLine("Неверный год рождения (должен быть от 1900 до текущего года)");
                     return false;
                 }
 
@@ -185,6 +192,11 @@ namespace TodoApp
 
                 AppInfo.ClearUndoRedo();
                 return true;
+            }
+            catch (DuplicateLoginException ex)
+            {
+                Console.WriteLine($"[ОШИБКА] {ex.Message}");
+                return false;
             }
             catch (DataAccessException ex)
             {
@@ -231,6 +243,12 @@ namespace TodoApp
                         break;
                     }
 
+                    // Проверка авторизации для всех команд кроме profile, help, exit
+                    if (input.ToLower() != "profile" && input.ToLower() != "help" && input.ToLower() != "exit")
+                    {
+                        EnsureAuthenticated();
+                    }
+
                     ICommand command = CommandParser.Parse(input);
                     command.Execute();
 
@@ -240,26 +258,44 @@ namespace TodoApp
                         AppInfo.RedoStack.Clear();
                     }
                 }
+                catch (AuthenticationException ex)
+                {
+                    Console.WriteLine($"[ОШИБКА АВТОРИЗАЦИИ] {ex.Message}");
+                    Console.WriteLine("   Пожалуйста, войдите в профиль командой 'profile'");
+                }
                 catch (ProfileNotFoundException ex)
                 {
-                    Console.WriteLine($"[ОШИБКА] {ex.Message}");
+                    Console.WriteLine($"[ОШИБКА ПРОФИЛЯ] {ex.Message}");
                 }
-                catch (InvalidPasswordException ex)
+                catch (DuplicateLoginException ex)
                 {
-                    Console.WriteLine($"[ОШИБКА] {ex.Message}");
+                    Console.WriteLine($"[ОШИБКА РЕГИСТРАЦИИ] {ex.Message}");
                 }
                 catch (TodoNotFoundException ex)
                 {
-                    Console.WriteLine($"[ОШИБКА] {ex.Message}");
+                    Console.WriteLine($"[ОШИБКА ЗАДАЧИ] {ex.Message}");
                 }
-                catch (TodoException ex)
+                catch (InvalidCommandException ex)
                 {
-                    Console.WriteLine($"[ОШИБКА] {ex.Message}");
+                    Console.WriteLine($"[ОШИБКА КОМАНДЫ] {ex.Message}");
+                }
+                catch (InvalidArgumentException ex)
+                {
+                    Console.WriteLine($"[ОШИБКА АРГУМЕНТА] {ex.Message}");
+                }
+                catch (EmptyStackException ex)
+                {
+                    Console.WriteLine($"[ОШИБКА UNDO/REDO] {ex.Message}");
                 }
                 catch (DataAccessException ex)
                 {
                     Console.WriteLine($"[ОШИБКА ФАЙЛА] {ex.Message}");
-                    Console.WriteLine($"   Файл: {ex.FilePath}");
+                    if (ex.FilePath != null)
+                        Console.WriteLine($"   Файл: {ex.FilePath}");
+                }
+                catch (TodoAppException ex)
+                {
+                    Console.WriteLine($"[ОШИБКА ПРИЛОЖЕНИЯ] {ex.Message}");
                 }
                 catch (Exception ex)
                 {
