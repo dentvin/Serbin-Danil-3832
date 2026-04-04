@@ -33,7 +33,10 @@ namespace TodoApp.Services
                 ["redo"] = args => new RedoCommand(),
                 ["linq"] = args => new LinqDemoCommand(),
                 ["error"] = args => new ErrorDemoCommand(),
-                ["load"] = args => ParseLoadCommand(args),
+                ["load"] = args => new LoadCommand(
+                    ParseInt(args, 0, "downloadsCount"),
+                    ParseInt(args, 1, "downloadSize")),
+                ["sync"] = args => ParseSyncCommand(args),
             };
         }
 
@@ -114,16 +117,7 @@ namespace TodoApp.Services
                 throw new InvalidArgumentException("index", "не указан", "Требуется указать индекс задачи");
             }
 
-            if (!int.TryParse(args[0], out int index))
-            {
-                throw new InvalidArgumentException("index", args[0], "Индекс должен быть целым числом");
-            }
-
-            if (index < 0)
-            {
-                throw new InvalidArgumentException("index", index.ToString(), "Индекс не может быть отрицательным");
-            }
-
+            int index = ParseInt(args, 0, "index");
             return new ReadCommand(index);
         }
 
@@ -134,15 +128,7 @@ namespace TodoApp.Services
                 throw new InvalidArgumentException("status", string.Join(" ", args), "Требуется: status <индекс> <статус>");
             }
 
-            if (!int.TryParse(args[0], out int index))
-            {
-                throw new InvalidArgumentException("index", args[0], "Индекс должен быть целым числом");
-            }
-
-            if (index < 0)
-            {
-                throw new InvalidArgumentException("index", index.ToString(), "Индекс не может быть отрицательным");
-            }
+            int index = ParseInt(args, 0, "index");
 
             string statusStr = args[1].ToLower();
             if (!Enum.TryParse<TodoStatus>(statusStr, ignoreCase: true, out var status))
@@ -160,15 +146,7 @@ namespace TodoApp.Services
                 throw new InvalidArgumentException("update", string.Join(" ", args), "Требуется: update <индекс> \"новый текст\"");
             }
 
-            if (!int.TryParse(args[0], out int index))
-            {
-                throw new InvalidArgumentException("index", args[0], "Индекс должен быть целым числом");
-            }
-
-            if (index < 0)
-            {
-                throw new InvalidArgumentException("index", index.ToString(), "Индекс не может быть отрицательным");
-            }
+            int index = ParseInt(args, 0, "index");
 
             string newText = string.Join(" ", args.Skip(1)).Trim('"');
             if (string.IsNullOrWhiteSpace(newText))
@@ -186,52 +164,46 @@ namespace TodoApp.Services
                 throw new InvalidArgumentException("index", "не указан", "Требуется указать индекс задачи для удаления");
             }
 
-            if (!int.TryParse(args[0], out int index))
-            {
-                throw new InvalidArgumentException("index", args[0], "Индекс должен быть целым числом");
-            }
-
-            if (index < 0)
-            {
-                throw new InvalidArgumentException("index", index.ToString(), "Индекс не может быть отрицательным");
-            }
-
+            int index = ParseInt(args, 0, "index");
             return new DeleteCommand(index);
         }
 
-        private static ICommand ParseLoadCommand(string[] args)
+        private static int ParseInt(string[] args, int position, string argumentName)
         {
-            if (args.Length < 2)
+            if (args.Length <= position)
             {
-                throw new InvalidArgumentException("load", string.Join(" ", args), 
-                    "Требуется: load <количество_скачиваний> <размер_скачиваний>");
+                throw new InvalidArgumentException(argumentName, "не указан", $"Требуется указать аргумент '{argumentName}'");
             }
-            
-            if (!int.TryParse(args[0], out int downloadsCount))
+
+            if (!int.TryParse(args[position], out int value))
             {
-                throw new InvalidArgumentException("downloadsCount", args[0], 
-                    "Количество скачиваний должно быть целым положительным числом");
+                throw new InvalidArgumentException(argumentName, args[position], "Значение должно быть целым числом");
             }
-            
-            if (!int.TryParse(args[1], out int downloadSize))
+
+            if (value < 0)
             {
-                throw new InvalidArgumentException("downloadSize", args[1], 
-                    "Размер скачиваний должен быть целым положительным числом");
+                throw new InvalidArgumentException(argumentName, value.ToString(), "Значение не может быть отрицательным");
             }
-            
-            if (downloadsCount <= 0)
+
+            return value;
+        }
+
+        private static ICommand ParseSyncCommand(string[] args)
+        {
+            bool pull = args.Contains("--pull");
+            bool push = args.Contains("--push");
+
+            if (!pull && !push)
             {
-                throw new InvalidArgumentException("downloadsCount", downloadsCount.ToString(), 
-                    "Количество скачиваний должно быть больше 0");
+                throw new InvalidArgumentException("sync", string.Join(" ", args), "Требуется указать --pull или --push");
             }
-            
-            if (downloadSize <= 0)
+
+            if (pull && push)
             {
-                throw new InvalidArgumentException("downloadSize", downloadSize.ToString(), 
-                    "Размер скачиваний должен быть больше 0");
+                throw new InvalidArgumentException("sync", string.Join(" ", args), "Нельзя использовать --pull и --push одновременно");
             }
-            
-            return new LoadCommand(downloadsCount, downloadSize);
+
+            return new SyncCommand(pull, push);
         }
 
         private static string[] SplitCommand(string input)
