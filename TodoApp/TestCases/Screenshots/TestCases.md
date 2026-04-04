@@ -34,7 +34,7 @@
 - Пользователь сохранён в базе данных `todos.db`
 
 **Скриншоты:**
-- `Screenshots/TC-01-step1.png`
+- `ScreenshotsTC-01-step1.png`
 
 ---
 
