@@ -84,6 +84,7 @@ namespace TodoApp
                     }
 
                     _currentProfile = profile;
+                    AppInfo.CurrentProfile = profile;
                     return true;
                 }
                 catch (ProfileNotFoundException)
@@ -149,7 +150,6 @@ namespace TodoApp
                     return false;
                 }
 
-                // Исправленный способ создания профиля (без конструктора с параметрами)
                 var profile = new Profile
                 {
                     Login = login,
@@ -161,6 +161,7 @@ namespace TodoApp
                 
                 _profileRepo.Add(profile);
                 _currentProfile = profile;
+                AppInfo.CurrentProfile = profile;
                 
                 return true;
             }
@@ -182,13 +183,17 @@ namespace TodoApp
             {
                 try
                 {
+                    // Если нет профиля — всегда предлагаем вход/регистрацию
                     if (_currentProfile is null)
                     {
+                        Console.WriteLine("\n=== НЕОБХОДИМА АВТОРИЗАЦИЯ ===");
                         if (!SelectOrCreateProfile())
                         {
+                            Console.WriteLine("Выход из программы...");
                             return;
                         }
                         Console.WriteLine($"\nДобро пожаловать, {_currentProfile.FirstName}!\n");
+                        continue;
                     }
 
                     Console.Write("> ");
@@ -200,6 +205,17 @@ namespace TodoApp
                         break;
                     }
 
+                    // Обработка выхода из профиля
+                    if (input.ToLower() == "profile -o" || input.ToLower() == "profile --out")
+                    {
+                        _currentProfile = null;
+                        AppInfo.CurrentProfile = null;
+                        AppInfo.ClearUndoRedo();
+                        Console.WriteLine("Вы вышли из профиля.");
+                        continue;
+                    }
+
+                    // Проверка авторизации для остальных команд
                     if (input.ToLower() != "profile" && input.ToLower() != "help" && input.ToLower() != "exit")
                     {
                         EnsureAuthenticated();
@@ -207,10 +223,24 @@ namespace TodoApp
 
                     ICommand command = CommandParser.Parse(input);
                     command.Execute();
+
+                    if (command is IUndoableCommand undoableCmd)
+                    {
+                        AppInfo.UndoStack.Push(undoableCmd);
+                        AppInfo.RedoStack.Clear();
+                    }
                 }
                 catch (AuthenticationException ex)
                 {
                     Console.WriteLine($"[ОШИБКА АВТОРИЗАЦИИ] {ex.Message}");
+                }
+                catch (ProfileNotFoundException ex)
+                {
+                    Console.WriteLine($"[ОШИБКА ПРОФИЛЯ] {ex.Message}");
+                }
+                catch (DuplicateLoginException ex)
+                {
+                    Console.WriteLine($"[ОШИБКА РЕГИСТРАЦИИ] {ex.Message}");
                 }
                 catch (TodoNotFoundException ex)
                 {
@@ -224,9 +254,18 @@ namespace TodoApp
                 {
                     Console.WriteLine($"[ОШИБКА АРГУМЕНТА] {ex.Message}");
                 }
+                catch (EmptyStackException ex)
+                {
+                    Console.WriteLine($"[ОШИБКА UNDO/REDO] {ex.Message}");
+                }
+                catch (TodoAppException ex)
+                {
+                    Console.WriteLine($"[ОШИБКА ПРИЛОЖЕНИЯ] {ex.Message}");
+                }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[ОШИБКА] {ex.Message}");
+                    Console.WriteLine($"[НЕИЗВЕСТНАЯ ОШИБКА] {ex.Message}");
+                    Console.WriteLine($"   {ex.GetType().Name}");
                 }
             }
         }

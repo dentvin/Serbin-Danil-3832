@@ -20,6 +20,7 @@ namespace TodoApp.Commands
                 AppInfo.CurrentProfile = null;
                 AppInfo.ClearUndoRedo();
                 Console.WriteLine("Вы вышли из профиля.");
+                // Не нужно вызывать Program.SetCurrentProfile - выход обрабатывается в Program.cs
             }
             else
             {
