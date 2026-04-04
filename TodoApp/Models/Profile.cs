@@ -31,7 +31,6 @@ namespace TodoApp.Models
         // Навигационное свойство (один ко многим)
         public virtual ICollection<TodoItem> TodoItems { get; set; } = new List<TodoItem>();
 
-        // Конструктор по умолчанию
         public Profile()
         {
             Id = Guid.NewGuid();

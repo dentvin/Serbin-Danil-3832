@@ -85,6 +85,16 @@ namespace TodoApp
 
                     _currentProfile = profile;
                     AppInfo.CurrentProfile = profile;
+                    
+                    // Загружаем задачи пользователя из БД
+                    var todos = _todoRepo.GetAll(profile.Id);
+                    var todoList = new TodoList();
+                    foreach (var item in todos)
+                    {
+                        todoList.Add(item);
+                    }
+                    AppInfo.UserTodos[profile.Id] = todoList;
+                    
                     return true;
                 }
                 catch (ProfileNotFoundException)
@@ -163,6 +173,9 @@ namespace TodoApp
                 _currentProfile = profile;
                 AppInfo.CurrentProfile = profile;
                 
+                // Создаём пустой список задач для нового пользователя
+                AppInfo.UserTodos[profile.Id] = new TodoList();
+                
                 return true;
             }
             catch (DuplicateLoginException ex)
@@ -183,7 +196,6 @@ namespace TodoApp
             {
                 try
                 {
-                    // Если нет профиля — всегда предлагаем вход/регистрацию
                     if (_currentProfile is null)
                     {
                         Console.WriteLine("\n=== НЕОБХОДИМА АВТОРИЗАЦИЯ ===");
@@ -205,7 +217,6 @@ namespace TodoApp
                         break;
                     }
 
-                    // Обработка выхода из профиля
                     if (input.ToLower() == "profile -o" || input.ToLower() == "profile --out")
                     {
                         _currentProfile = null;
@@ -215,7 +226,6 @@ namespace TodoApp
                         continue;
                     }
 
-                    // Проверка авторизации для остальных команд
                     if (input.ToLower() != "profile" && input.ToLower() != "help" && input.ToLower() != "exit")
                     {
                         EnsureAuthenticated();
